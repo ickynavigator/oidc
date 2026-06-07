@@ -38,6 +38,7 @@ services:
   webfinger:
     build: ./webfinger
     container_name: webfinger
+    restart: unless-stopped
     environment:
       - ISSUER_DOMAIN=${POCKET_ID_DOMAIN}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
