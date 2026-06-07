@@ -1,0 +1,81 @@
+name: oidc
+
+services:
+  pocket-id:
+    image: ghcr.io/pocket-id/pocket-id:v2
+    container_name: pocket-id
+    restart: unless-stopped
+    environment:
+      - APP_URL=${POCKET_ID_DOMAIN}
+      - ENCRYPTION_KEY=${POCKET_ID_ENCRYPTION_KEY}
+      - TRUST_PROXY=true
+      - DB_CONNECTION_STRING=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD", "/app/pocket-id", "healthcheck"]
+      interval: 1m30s
+      timeout: 5s
+      retries: 2
+      start_period: 10s
+    volumes:
+      - pocket-id-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tunnel
+      - data
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel run
+    networks:
+      - tunnel
+
+  webfinger:
+    build: ./webfinger
+    container_name: webfinger
+    environment:
+      - ISSUER_DOMAIN=${POCKET_ID_DOMAIN}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - PORT=8000
+    volumes:
+      - pocket-id-data:/app/pocket-id-data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tunnel
+      - data
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - pocket-id-db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "wal_level=logical"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data
+
+networks:
+  tunnel:
+    driver: bridge
+  data:
+
+volumes:
+  pocket-id-data:
+  pocket-id-db:
