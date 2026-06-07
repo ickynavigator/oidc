@@ -6,7 +6,7 @@ import wellKnownController from './controller/well-known';
 
 const app = new Hono()
   .use('*', honoLogger())
-  .use('*', cors())
+  .use('*', cors({ allowMethods: ['GET'] }))
   .use('*', requestId())
   .get('/', (ctx) => ctx.json({ message: 'Hello, World!' }, 200))
   .route('/.well-known', wellKnownController);

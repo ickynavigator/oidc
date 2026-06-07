@@ -3,20 +3,20 @@ import { sValidator } from '@hono/standard-validator';
 import { LOOKUP_CONSTANTS, WebFinger } from '../webfinger';
 import { UnreachableCaseError } from '../lib';
 import z from 'zod';
+import { rateLimiter } from 'hono-rate-limiter';
 
 const webfinger = new WebFinger();
 
-const app = new Hono().get(
-  '/webfinger',
-  sValidator('query', z.object({ resource: z.string().optional() })),
-  async (ctx) => {
+const app = new Hono()
+  .use(rateLimiter({  keyGenerator: ({ req }) => req.header('x-forwarded-for') ?? '',limit: 1000 }))
+  .get('/webfinger', sValidator('query', z.object({ resource: z.string().optional() })), async (ctx) => {
     const { resource } = ctx.req.valid('query');
 
     if (!resource) {
       return ctx.json({ error: "Missing required 'resource' query parameter" }, 400);
     }
 
-    const result = await webfinger.lookup(resource.toLowerCase());
+    const result = await webfinger.lookup(resource);
 
     if (typeof result === 'string') {
       switch (result) {
@@ -35,8 +35,10 @@ const app = new Hono().get(
       }
     }
 
-    return ctx.json(result);
-  },
-);
+    ctx.header('Cache-Control', 'public, max-age=60');
+    return ctx.body(JSON.stringify(result), 200, {
+      'Content-Type': 'application/jrd+json',
+    });
+  });
 
 export default app;

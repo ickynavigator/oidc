@@ -27,6 +27,7 @@
     "@t3-oss/env-core": "^0.13.11",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.23",
+    "hono-rate-limiter": "^0.5.3",
     "lru-cache": "^11.5.1",
     "postgres": "^3.4.9",
     "zod": "^4.4.3"

@@ -4,12 +4,19 @@ import * as schema from './db/schema';
 import { config } from './env';
 import { db } from './db';
 
+interface WebFingerLink {
+  rel: string;
+  href?: string;
+  type?: string;
+  titles?: Record<string, string>;
+  properties?: Record<string, string | null>;
+}
+
 interface WebFingerResponse {
   subject: string;
-  links: {
-    rel: string;
-    href: string;
-  }[];
+  links: WebFingerLink[];
+  aliases?: string[];
+  properties?: Record<string, string | null>;
 }
 
 const LOOKUP_CONSTANTS = {
@@ -26,8 +33,26 @@ class WebFinger {
     ttl: 1000 * 60,
   });
 
-  private async _lookup(resource: string) {
+  private parseResource(resource: string) {
     const [resourceType, subject] = resource.split(':');
+
+    return { resourceType, subject };
+  }
+
+  private parseSubject(subject: string) {
+    const raw = subject.trim();
+
+    const [left, right] = raw.split('@');
+
+    if (!left || !right) {
+      return { domain: undefined, raw, username: undefined };
+    }
+
+    return { domain: right, raw, username: left };
+  }
+
+  private async _lookup(resource: string) {
+    const { resourceType, subject } = this.parseResource(resource);
 
     if (!subject) {
       return LOOKUP_CONSTANTS.NO_SUBJECT;
@@ -35,10 +60,12 @@ class WebFinger {
 
     switch (resourceType) {
       case 'acct': {
+        const { raw, username } = this.parseSubject(subject);
+
         const [user] = await db
           .select()
           .from(schema.users)
-          .where(or(eq(schema.users.username, subject), eq(schema.users.email, subject)))
+          .where(or(username ? eq(schema.users.username, username) : undefined, eq(schema.users.email, raw)))
           .limit(1);
 
         if (!user) {

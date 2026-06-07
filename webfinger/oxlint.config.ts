@@ -32,6 +32,7 @@ export default defineConfig({
     'no-console': 'error',
     'no-magic-numbers': 'off',
     'no-param-reassign': 'error',
+    "no-ternary": "off",
     'no-unused-expressions': ['error', { allowShortCircuit: true }],
     'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     'prefer-template': 'error',
