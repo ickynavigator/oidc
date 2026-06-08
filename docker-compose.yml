@@ -72,6 +72,25 @@ services:
     networks:
       - data
 
+  # tinyauth:
+  #   image: ghcr.io/tinyauthapp/tinyauth:v5
+  #   container_name: tinyauth
+  #   restart: unless-stopped
+  #   environment:
+  #     - TINYAUTH_APPURL=${TINYAUTH_DOMAIN}
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTID=${TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTID}
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTSECRET=${TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTSECRET}
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_AUTHURL=${POCKET_ID_DOMAIN}/authorize
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_TOKENURL=${POCKET_ID_DOMAIN}/api/oidc/token
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_USERINFOURL=${POCKET_ID_DOMAIN}/api/oidc/userinfo
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_REDIRECTURL=${TINYAUTH_DOMAIN}/api/oauth/callback/pocketid
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_SCOPES=openid email profile groups
+  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_NAME=Pocket ID
+  #   volumes:
+  #     - tinyauth-data:/data
+  #   networks:
+  #     - tunnel
+
 networks:
   tunnel:
     driver: bridge
@@ -80,3 +99,4 @@ networks:
 volumes:
   pocket-id-data:
   pocket-id-db:
+  # tinyauth-data:
