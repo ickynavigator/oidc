@@ -1,30 +1,6 @@
 name: oidc
 
 services:
-  pocket-id:
-    image: ghcr.io/pocket-id/pocket-id:v2
-    container_name: pocket-id
-    restart: unless-stopped
-    environment:
-      - APP_URL=${POCKET_ID_DOMAIN}
-      - ENCRYPTION_KEY=${POCKET_ID_ENCRYPTION_KEY}
-      - TRUST_PROXY=true
-      - DB_CONNECTION_STRING=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    healthcheck:
-      test: ["CMD", "/app/pocket-id", "healthcheck"]
-      interval: 1m30s
-      timeout: 5s
-      retries: 2
-      start_period: 10s
-    volumes:
-      - pocket-id-data:/app/data
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - tunnel
-      - data
-
   cloudflare-tunnel:
     image: cloudflare/cloudflared:latest
     container_name: cloudflare-tunnel
@@ -32,6 +8,13 @@ services:
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     command: tunnel run
+    healthcheck:
+      test:
+        ["CMD", "cloudflared", "tunnel", "--metrics", "0.0.0.0:20241", "ready"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - tunnel
 
@@ -40,61 +23,50 @@ services:
     container_name: webfinger
     restart: unless-stopped
     environment:
-      - ISSUER_DOMAIN=${POCKET_ID_DOMAIN}
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - ISSUER_DOMAIN=${TINYAUTH_DOMAIN}
+      - DATABASE_URL=${LLDAP_DATABASE_URL}
       - PORT=8000
-    volumes:
-      - pocket-id-data:/app/pocket-id-data:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - tunnel
-      - data
 
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
+  lldap:
+    container_name: lldap
+    image: lldap/lldap:stable
     volumes:
-      - pocket-id-db:/var/lib/postgresql/data
+      - lldap-data:/data
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    command: ["postgres", "-c", "wal_level=logical"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - LLDAP_JWT_SECRET=${LLDAP_JWT_SECRET}
+      - LLDAP_KEY_SEED=${LLDAP_KEY_SEED}
+      - LLDAP_LDAP_BASE_DN=${LLDAP_LDAP_BASE_DN}
+      - LLDAP_LDAP_USER_PASS=${LLDAP_LDAP_USER_PASS}
+      - LLDAP_DATABASE_URL=${LLDAP_DATABASE_URL}
     networks:
-      - data
+      - tunnel
 
-  # tinyauth:
-  #   image: ghcr.io/tinyauthapp/tinyauth:v5
-  #   container_name: tinyauth
-  #   restart: unless-stopped
-  #   environment:
-  #     - TINYAUTH_APPURL=${TINYAUTH_DOMAIN}
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTID=${TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTID}
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTSECRET=${TINYAUTH_OAUTH_PROVIDERS_POCKETID_CLIENTSECRET}
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_AUTHURL=${POCKET_ID_DOMAIN}/authorize
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_TOKENURL=${POCKET_ID_DOMAIN}/api/oidc/token
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_USERINFOURL=${POCKET_ID_DOMAIN}/api/oidc/userinfo
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_REDIRECTURL=${TINYAUTH_DOMAIN}/api/oauth/callback/pocketid
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_SCOPES=openid email profile groups
-  #     - TINYAUTH_OAUTH_PROVIDERS_POCKETID_NAME=Pocket ID
-  #   volumes:
-  #     - tinyauth-data:/data
-  #   networks:
-  #     - tunnel
+  tinyauth:
+    image: ghcr.io/tinyauthapp/tinyauth:v5
+    container_name: tinyauth
+    restart: unless-stopped
+    environment:
+      - TINYAUTH_LDAP_ADDRESS=ldap://lldap:3890
+      - TINYAUTH_LDAP_BINDDN=uid=${TINYAUTH_LDAP_OBSERVER_ID},ou=people,${LLDAP_LDAP_BASE_DN}
+      - TINYAUTH_LDAP_BINDPASSWORD=${TINYAUTH_LDAP_OBSERVER_PASSWORD}
+      - TINYAUTH_LDAP_BASEDN=${LLDAP_LDAP_BASE_DN}
+      - TINYAUTH_LDAP_SEARCHFILTER=(uid=%s)
+      - TINYAUTH_LDAP_INSECURE=true
+      - TINYAUTH_APPURL=${TINYAUTH_DOMAIN}
+      - TINYAUTH_OIDC_CLIENTS_TAILSCALE_CLIENTID=${TINYAUTH_OIDC_CLIENTS_TAILSCALE_CLIENTID}
+      - TINYAUTH_OIDC_CLIENTS_TAILSCALE_CLIENTSECRET=${TINYAUTH_OIDC_CLIENTS_TAILSCALE_CLIENTSECRET}
+      - TINYAUTH_OIDC_CLIENTS_TAILSCALE_NAME=${TINYAUTH_OIDC_CLIENTS_TAILSCALE_NAME}
+    volumes:
+      - tinyauth-data:/data
+    networks:
+      - tunnel
 
 networks:
   tunnel:
     driver: bridge
-  data:
 
 volumes:
-  pocket-id-data:
-  pocket-id-db:
-  # tinyauth-data:
+  lldap-data:
+  tinyauth-data:

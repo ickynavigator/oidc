@@ -65,7 +65,7 @@ class WebFinger {
         const [user] = await db
           .select()
           .from(schema.users)
-          .where(or(username ? eq(schema.users.username, username) : undefined, eq(schema.users.email, raw)))
+          .where(or(username ? eq(schema.users.user_id, username) : undefined, eq(schema.users.email, raw)))
           .limit(1);
 
         if (!user) {
