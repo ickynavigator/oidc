@@ -31,7 +31,7 @@ services:
 
   lldap:
     container_name: lldap
-    image: lldap/lldap:stable
+    image: ghcr.io/lldap/lldap:stable
     volumes:
       - lldap-data:/data
     environment:
