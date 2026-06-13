@@ -8,7 +8,7 @@ import { rateLimiter } from 'hono-rate-limiter';
 const webfinger = new WebFinger();
 
 const app = new Hono()
-  .use(rateLimiter({  keyGenerator: ({ req }) => req.header('x-forwarded-for') ?? '',limit: 1000 }))
+  .use(rateLimiter({ keyGenerator: ({ req }) => req.header('x-forwarded-for') ?? '', limit: 1000 }))
   .get('/webfinger', sValidator('query', z.object({ resource: z.string().optional() })), async (ctx) => {
     const { resource } = ctx.req.valid('query');
 
