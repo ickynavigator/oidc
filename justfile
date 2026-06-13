@@ -1,5 +1,3 @@
-APP_NAME := "oidc"
-
 up:
     docker compose up -d --remove-orphans
 
@@ -13,3 +11,7 @@ update:
 
 status:
     docker compose ps -a
+
+reset:
+    docker compose down -v --remove-orphans
+    docker compose up -d --remove-orphans
