@@ -8,7 +8,7 @@ const app = new Hono()
   .use('*', honoLogger())
   .use('*', cors({ allowMethods: ['GET'] }))
   .use('*', requestId())
-  .get('/', (ctx) => ctx.json({ message: 'Hello, World!' }, 200))
+  .get('/health', (ctx) => ctx.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() }))
   .route('/.well-known', wellKnownController);
 
 export default app;
