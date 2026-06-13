@@ -44,7 +44,7 @@ services:
       - tunnel
 
   tinyauth:
-    image: ghcr.io/tinyauthapp/tinyauth:v5
+    image: ghcr.io/tinyauthapp/tinyauth:nightly
     container_name: tinyauth
     restart: unless-stopped
     environment:
