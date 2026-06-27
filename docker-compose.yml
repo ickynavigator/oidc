@@ -3,7 +3,6 @@ name: oidc
 services:
   cloudflare-tunnel:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflare-tunnel
     restart: unless-stopped
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
@@ -18,20 +17,9 @@ services:
     networks:
       - tunnel
 
-  webfinger:
-    build: ./webfinger
-    container_name: webfinger
-    restart: unless-stopped
-    environment:
-      - ISSUER_DOMAIN=${TINYAUTH_DOMAIN}
-      - DATABASE_URL=${LLDAP_DATABASE_URL}
-      - PORT=8000
-    networks:
-      - tunnel
-
   lldap:
-    container_name: lldap
     image: ghcr.io/lldap/lldap:stable
+    restart: unless-stopped
     volumes:
       - lldap-data:/data
     environment:
@@ -45,7 +33,6 @@ services:
 
   tinyauth:
     image: ghcr.io/tinyauthapp/tinyauth:nightly
-    container_name: tinyauth
     restart: unless-stopped
     environment:
       - TINYAUTH_LDAP_ADDRESS=ldap://lldap:3890
@@ -60,7 +47,8 @@ services:
       - TINYAUTH_OIDC_CLIENTS_TAILSCALE_TRUSTEDREDIRECTURIS=${TINYAUTH_OIDC_CLIENTS_TAILSCALE_TRUSTEDREDIRECTURIS}
       - TINYAUTH_OIDC_CLIENTS_TAILSCALE_NAME=${TINYAUTH_OIDC_CLIENTS_TAILSCALE_NAME}
     depends_on:
-      - lldap
+      lldap:
+        condition: service_healthy
     volumes:
       - tinyauth-data:/data
     networks:
