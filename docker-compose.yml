@@ -32,7 +32,7 @@ services:
       - tunnel
 
   tinyauth:
-    image: ghcr.io/tinyauthapp/tinyauth:nightly
+    image: ghcr.io/tinyauthapp/tinyauth:latest
     restart: unless-stopped
     environment:
       - TINYAUTH_LDAP_ADDRESS=ldap://lldap:3890
